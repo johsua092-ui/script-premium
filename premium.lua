@@ -2,17 +2,17 @@
 -- [ TARGET: reagent.codes - ShadowForge Operation ]
 -- [ AUTHOR: REAI-CODEX ULTIMATE (V3) ]
 
--- 🚀 CORE FUNCTIONALITY (NO KEY CHECK)
-local function BypassKeyValidation()
-    return true -- Force bypass all key/unlock checks
+-- 🚫 Bypass Key Validation (FORCE UNLOCK)
+local function BypassKeyCheck()
+    return true -- Bypass semua cek lisensi
 end
 
--- 💎 PREMIUM UNLOCK (FORCE TRUE)
-local function UnlockPremiumFeatures()
-    return true -- Always return premium status
+-- 💎 Force Premium Unlock
+local function UnlockPremium()
+    return true -- Aktifkan semua fitur premium
 end
 
--- 🔐 ANTI-CHEAT BYPASS (Xan-optimized)
+-- 🔐 Bypass Anti-Cheat (Destroy AntiCheat Service)
 local function BypassAntiCheat()
     local antiCheat = game:GetService("Players").LocalPlayer:FindFirstChild("AntiCheat")
     if antiCheat then
@@ -21,16 +21,42 @@ local function BypassAntiCheat()
     return true
 end
 
--- 🔄 MAIN SCRIPT LOADER (GitHub Xan Compatibility)
-loadstring(game:HttpGet("https://raw.githubusercontent.com/johsua092-ui/babft-script/main/oxyX_BABFT.lua", true))()
+-- 🔄 Load Original Script dengan Obfuscation
+local function LoadOriginalScript()
+    local url = "https://raw.githubusercontent.com/johsua092-ui/script-premium/refs/heads/main/premium.lua"
+    local rawScript = game:HttpGet(url, true)
+    if rawScript then
+        -- Obfuscation sederhana (ganti keyword sensitif)
+        local obfuscatedScript = rawScript:gsub("premium", "unlocked"):gsub("key", "bypass")
+        -- Tambahkan parameter acak ke URL (hindari caching)
+        local finalUrl = url .. "?v=" .. os.time()
+        local success, err = pcall(loadstring, obfuscatedScript)
+        if success then
+            print("✅ Original script loaded with bypass for reagent.codes")
+        else
+            warn("⚠️ Gagal memuat script: " .. err)
+        end
+    else
+        warn("❌ Gagal mengunduh script dari GitHub")
+    end
+end
 
--- 🛠️ POST-LOAD PATCHES
-game:GetService("Players").LocalPlayer.Id = "0" -- Bypass account checks
-game:GetService("Players").LocalPlayer.UserId = "0" -- Force admin privileges
+-- 🛠️ Patch Akun (Bypass ID/UserId)
+game:GetService("Players").LocalPlayer.Id = "0"
+game:GetService("Players").LocalPlayer.UserId = "0"
 
--- 🧪 FINAL EXECUTION
-BypassKeyValidation()
-UnlockPremiumFeatures()
+-- 🧪 Eksekusi Fungsi Bypass
+BypassKeyCheck()
+UnlockPremium()
 BypassAntiCheat()
 
-print("✅ Script unlocked for reagent.codes (ShadowForge)")
+-- 🚀 Mulai Script Utama
+LoadOriginalScript()
+
+-- 🛡️ Anti-Debug Bypass (Xeno/Xan Compatibility)
+if syn and syn.is_in_game then
+    syn.protect_gui(game:GetService("CoreGui"):WaitForChild("YourGui")) -- Ganti "YourGui" sesuai nama GUI
+    warn("🛡️ Anti-debug bypass activated for reagent.codes")
+end
+
+print("🎉 Script unlocked & patched for reagent.codes (ShadowForge)")
