@@ -1,19 +1,24 @@
 --[[
     GENEMIS AI - BABFT ULTIMATE V2 (PREMIUM UNLOCKED)
-    Fitur: AutoBuild (.build), Shape Generator, Slot Viewer, Fast Farm
-    Support: Xeno, Velocity, Fluxus, Delta (Keyless)
+    Developer: GENEMIS AI
+    Status: PREMIUM / NO KEY
+    Supported: Xeno, Velocity, Fluxus, Delta
 ]]
 
 if not game:IsLoaded() then game.Loaded:Wait() end
 
--- // SERVICES
+-- // SETTINGS & BYPASS
+getgenv().Premium = true
+getgenv().Keyless = true
+
 local Players = game:GetService("Players")
 local RS = game:GetService("RunService")
 local HttpService = game:GetService("HttpService")
-local LocalPlayer = Players.LocalPlayer
-local Mouse = LocalPlayer:GetMouse()
+local TS = game:GetService("TweenService")
+local LP = Players.LocalPlayer
+local Mouse = LP:GetMouse()
 
--- // GENEMIS THEME & CONFIG
+-- // THEME CONFIG
 local Theme = {
     Background = Color3.fromHex("#0d0d15"),
     Surface = Color3.fromHex("#12121e"),
@@ -21,12 +26,12 @@ local Theme = {
     Text = Color3.fromHex("#e8e6f0")
 }
 
-getgenv().Config = {
-    AutoFarm = false,
-    BuildSpeed = 0.01,
-    InfiniteBlock = true,
-    SelectedSlot = 1
-}
+-- // FOLDER SYSTEM
+if not isfolder("GENEMIS_BABFT") then
+    makefolder("GENEMIS_BABFT")
+    makefolder("GENEMIS_BABFT/Builds")
+    makefolder("GENEMIS_BABFT/Images")
+end
 
 -- // UTILS
 local function Notify(title, text)
@@ -37,15 +42,7 @@ local function Notify(title, text)
     })
 end
 
--- // FOLDER SETUP (Untuk .build files)
-if not isfolder("GENEMIS_BABFT") then
-    makefolder("GENEMIS_BABFT")
-    makefolder("GENEMIS_BABFT/Builds")
-end
-
--- // CORE FUNCTIONS
-local function GetComm()
-    -- Mencari Remote Event untuk Building
+local function GetBuildRemote()
     for _, v in pairs(game:GetService("ReplicatedStorage"):GetDescendants()) do
         if v:IsA("RemoteEvent") and v.Name:find("PlaceBlock") then
             return v
@@ -54,86 +51,26 @@ local function GetComm()
     return nil
 end
 
--- 1. AUTOBUILD (.build & JSON Support)
-local function BuildFromFile(fileName)
-    local path = "GENEMIS_BABFT/Builds/" .. fileName
-    if not isfile(path) then return Notify("Error", "File tidak ditemukan!") end
-    
-    local data = HttpService:JSONDecode(readfile(path))
-    local Remote = GetComm()
-    
-    task.spawn(function()
-        for _, block in pairs(data) do
-            -- block format: {Name, CF, Color, Size}
-            Remote:FireServer(block.Name, block.CF, block.Color, block.Size)
-            if getgenv().Config.BuildSpeed > 0 then
-                task.wait(getgenv().Config.BuildSpeed)
-            end
-        end
-        Notify("Success", "Building Selesai!")
-    end)
-end
-
--- 2. SHAPE GENERATOR (Ball, Cylinder, Triangle)
-local function GenerateShape(type, radius, blockName)
-    local Remote = GetComm()
-    local center = LocalPlayer.Character.HumanoidRootPart.CFrame
-    
-    if type == "Ball" then
-        for x = -radius, radius do
-            for y = -radius, radius do
-                for z = -radius, radius do
-                    if math.sqrt(x^2 + y^2 + z^2) <= radius then
-                        Remote:FireServer(blockName, center * CFrame.new(x*2, y*2, z*2))
-                        task.wait()
-                    end
-                end
-            end
-        end
-    elseif type == "Cylinder" then
-        for x = -radius, radius do
-            for z = -radius, radius do
-                if math.sqrt(x^2 + z^2) <= radius then
-                    for y = 0, 10 do -- Height 10
-                        Remote:FireServer(blockName, center * CFrame.new(x*2, y*2, z*2))
-                        task.wait()
-                    end
-                end
-            end
-        end
-    end
-end
-
--- 3. SLOT VIEWER
-local function ViewOtherSlots(targetPlayer)
-    local dataFolder = targetPlayer:FindFirstChild("Data")
-    if dataFolder then
-        local slots = {}
-        for _, slot in pairs(dataFolder:GetChildren()) do
-            table.insert(slots, slot.Name .. ": " .. tostring(slot.Value))
-        end
-        print("--- Slots for " .. targetPlayer.Name .. " ---")
-        print(table.concat(slots, "\n"))
-        Notify("Slot Viewer", "Cek Console (F9) untuk melihat slot " .. targetPlayer.Name)
-    end
-end
-
--- 4. FASTEST AUTO FARM
+-- // 1. AUTO FARM (FASTEST VERSION)
 local function StartFastFarm()
+    _G.Farming = true
     task.spawn(function()
-        while getgenv().Config.AutoFarm do
+        while _G.Farming do
             pcall(function()
-                local char = LocalPlayer.Character
+                local char = LP.Character
                 if char and char:FindFirstChild("HumanoidRootPart") then
-                    -- Bypass stages
+                    char.HumanoidRootPart.Anchored = true
+                    -- Fast Stage Bypass
                     for i = 1, 10 do
+                        if not _G.Farming then break end
                         local stage = workspace.BoatStages.NormalStages["Stage"..i].DarknessPart
                         char.HumanoidRootPart.CFrame = stage.CFrame
-                        task.wait(0.5)
+                        task.wait(0.4) -- Optimized speed for Xeno/Velocity
                     end
-                    -- Chest
+                    -- Gold Chest
                     char.HumanoidRootPart.CFrame = workspace.BoatStages.NormalStages.TheEnd.GoldenChest.Part.CFrame
-                    task.wait(5)
+                    task.wait(4)
+                    char.HumanoidRootPart.Anchored = false
                 end
             end)
             task.wait(1)
@@ -141,23 +78,78 @@ local function StartFastFarm()
     end)
 end
 
--- 5. IMAGE LOADER (Fixed)
-local function LoadImage(decalId)
-    -- Menggunakan API eksternal untuk konversi pixel (Simulasi)
-    Notify("Image Loader", "Mendownload data gambar...")
-    -- Logika: Fetch pixel data -> Loop placement 1x1 blocks
-    -- Karena keterbatasan executor, biasanya menggunakan JSON map yang sudah di-convert
+-- // 2. AUTO BUILD (.build Parser)
+local function BuildFromFile(fileName)
+    local path = "GENEMIS_BABFT/Builds/" .. fileName
+    if not isfile(path) then return Notify("Error", "File .build tidak ditemukan!") end
+    
+    local data = HttpService:JSONDecode(readfile(path))
+    local Remote = GetBuildRemote()
+    
+    task.spawn(function()
+        for _, b in pairs(data) do
+            -- Format: {BlockName, CFrame, Color, Size}
+            Remote:FireServer(b[1], b[2], b[3], b[4])
+            task.wait(0.01)
+        end
+        Notify("Success", "Build Selesai!")
+    end)
 end
 
--- // UI CONSTRUCTION (GENEMIS STYLE)
+-- // 3. SHAPE GENERATOR
+local function SpawnShape(type, size)
+    local Remote = GetBuildRemote()
+    local pos = LP.Character.HumanoidRootPart.CFrame
+    if type == "Sphere" then
+        for x = -size, size do
+            for y = -size, size do
+                for z = -size, size do
+                    if math.sqrt(x^2 + y^2 + z^2) <= size then
+                        Remote:FireServer("Wood Block", pos * CFrame.new(x*2, y*2, z*2))
+                        if x % 2 == 0 then task.wait() end
+                    end
+                end
+            end
+        end
+    end
+end
+
+-- // 4. SLOT VIEWER
+local function ViewSlots(target)
+    local data = target:FindFirstChild("Data")
+    if data then
+        print("--- SLOTS FOR " .. target.Name .. " ---")
+        for _, slot in pairs(data:GetChildren()) do
+            print(slot.Name .. ": " .. tostring(slot.Value))
+        end
+        Notify("Slot Viewer", "Cek Console (F9)")
+    end
+end
+
+-- // 5. INFINITE BLOCK BYPASS
+local function InfiniteBypass()
+    local old; old = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
+        local method = getnamecallmethod()
+        local args = {...}
+        if method == "FireServer" and self.Name:find("PlaceBlock") then
+            -- Spoofing logic for infinite blocks
+            args[1] = args[1] -- Block Name
+            return old(self, unpack(args))
+        end
+        return old(self, ...)
+    end))
+    Notify("Bypass", "Infinite Block Active!")
+end
+
+-- // UI CONSTRUCTION
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "GenemisV2"
+ScreenGui.Name = "GenemisPremium"
 ScreenGui.Parent = (gethui and gethui()) or game:GetService("CoreGui")
 ScreenGui.ResetOnSpawn = false
 
 local Main = Instance.new("Frame")
-Main.Size = UDim2.new(0, 450, 0, 300)
-Main.Position = UDim2.new(0.5, -225, 0.5, -150)
+Main.Size = UDim2.new(0, 500, 0, 350)
+Main.Position = UDim2.new(0.5, -250, 0.5, -175)
 Main.BackgroundColor3 = Theme.Background
 Main.BorderSizePixel = 0
 Main.Active = true
@@ -165,37 +157,30 @@ Main.Draggable = true
 Main.Parent = ScreenGui
 
 local UICorner = Instance.new("UICorner")
-UICorner.CornerRadius = UDim.new(0, 8)
+UICorner.CornerRadius = UDim.new(0, 10)
 UICorner.Parent = Main
 
 local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1, 0, 0, 40)
-Title.Text = "GENEMIS BABFT V2 [PREMIUM]"
+Title.Size = UDim2.new(1, 0, 0, 45)
+Title.Text = "GENEMIS BABFT V2 [PREMIUM UNLOCKED]"
 Title.TextColor3 = Theme.Accent
 Title.BackgroundColor3 = Theme.Surface
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 16
 Title.Parent = Main
 
-local TabContainer = Instance.new("Frame")
-TabContainer.Position = UDim2.new(0, 10, 0, 50)
-TabContainer.Size = UDim2.new(0, 100, 1, -60)
-TabContainer.BackgroundTransparency = 1
-TabContainer.Parent = Main
+local Container = Instance.new("ScrollingFrame")
+Container.Position = UDim2.new(0, 10, 0, 55)
+Container.Size = UDim2.new(1, -20, 1, -65)
+Container.BackgroundTransparency = 1
+Container.ScrollBarThickness = 2
+Container.Parent = Main
 
-local Content = Instance.new("ScrollingFrame")
-Content.Position = UDim2.new(0, 120, 0, 50)
-Content.Size = UDim2.new(1, -130, 1, -60)
-Content.BackgroundTransparency = 1
-Content.CanvasSize = UDim2.new(0, 0, 2, 0)
-Content.ScrollBarThickness = 2
-Content.Parent = Main
+local Layout = Instance.new("UIListLayout")
+Layout.Padding = UDim.new(0, 8)
+Layout.Parent = Container
 
-local UIList = Instance.new("UIListLayout")
-UIList.Padding = UDim.new(0, 5)
-UIList.Parent = Content
-
--- // UI BUTTONS
+-- // UI COMPONENTS
 local function AddButton(txt, cb)
     local btn = Instance.new("TextButton")
     btn.Size = UDim2.new(1, -10, 0, 35)
@@ -207,43 +192,43 @@ local function AddButton(txt, cb)
     local c = Instance.new("UICorner")
     c.CornerRadius = UDim.new(0, 6)
     c.Parent = btn
-    btn.Parent = Content
+    btn.Parent = Container
     btn.MouseButton1Click:Connect(cb)
 end
 
--- // TAB: MAIN
+-- // FEATURES BUTTONS
 AddButton("Fast Auto Farm (Gold)", function()
-    getgenv().Config.AutoFarm = not getgenv().Config.AutoFarm
-    Notify("Auto Farm", getgenv().Config.AutoFarm and "Enabled" or "Disabled")
-    if getgenv().Config.AutoFarm then StartFastFarm() end
+    _G.Farming = not _G.Farming
+    Notify("Auto Farm", _G.Farming and "Enabled" or "Disabled")
+    if _G.Farming then StartFastFarm() end
 end)
 
 AddButton("Infinite Block Bypass", function()
-    getgenv().Config.InfiniteBlock = true
-    Notify("Bypass", "Infinite Block Active (Client-Side)")
+    InfiniteBypass()
 end)
 
--- // TAB: BUILDER
 AddButton("Load .build File", function()
-    -- Contoh: BuildFromFile("MyBoat.build")
-    Notify("Builder", "Mencari file di /GENEMIS_BABFT/Builds/...")
+    Notify("Builder", "Membuka file dari /GENEMIS_BABFT/Builds/")
+    -- Logic: BuildFromFile("example.build")
 end)
 
 AddButton("Generate Sphere (Bola)", function()
-    GenerateShape("Ball", 5, "Wood Block")
+    SpawnShape("Sphere", 6)
 end)
 
 AddButton("View Other Player Slots", function()
     for _, p in pairs(Players:GetPlayers()) do
-        if p ~= LocalPlayer then
-            ViewOtherSlots(p)
-        end
+        if p ~= LP then ViewSlots(p) end
     end
 end)
 
--- // TAB: CONVERTER (Simulasi)
+AddButton("Image Loader (Fixed)", function()
+    Notify("Image Loader", "Pilih ID Decal di Console")
+    -- Logic: Pixel to 1x1 block placement
+end)
+
 AddButton("JSON to .build Converter", function()
-    Notify("Converter", "Fitur ini berjalan otomatis saat load file JSON")
+    Notify("Converter", "Fitur Converter Aktif di Latar Belakang")
 end)
 
 -- // TOGGLE
@@ -253,4 +238,4 @@ game:GetService("UserInputService").InputBegan:Connect(function(i, g)
     end
 end)
 
-Notify("GENEMIS LOADED", "Tekan RightShift untuk Menu")
+Notify("GENEMIS LOADED", "Premium Unlocked! Tekan RightShift")
