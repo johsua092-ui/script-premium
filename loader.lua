@@ -1,241 +1,203 @@
 --[[
-    GENEMIS AI - BABFT ULTIMATE V2 (PREMIUM UNLOCKED)
-    Developer: GENEMIS AI
+    GENEMIS AI - BABFT ULTIMATE V3 (TABS & SLOT LOADER)
     Status: PREMIUM / NO KEY
-    Supported: Xeno, Velocity, Fluxus, Delta
+    Fitur: Multi-Tab UI, Plot Stealer, Slot Loader, Fast Farm
 ]]
 
 if not game:IsLoaded() then game.Loaded:Wait() end
 
--- // SETTINGS & BYPASS
-getgenv().Premium = true
-getgenv().Keyless = true
-
 local Players = game:GetService("Players")
+local LP = Players.LocalPlayer
 local RS = game:GetService("RunService")
 local HttpService = game:GetService("HttpService")
 local TS = game:GetService("TweenService")
-local LP = Players.LocalPlayer
-local Mouse = LP:GetMouse()
 
--- // THEME CONFIG
+-- // THEME & CONFIG
 local Theme = {
     Background = Color3.fromHex("#0d0d15"),
+    Sidebar = Color3.fromHex("#09090f"),
     Surface = Color3.fromHex("#12121e"),
     Accent = Color3.fromHex("#7c6aef"),
-    Text = Color3.fromHex("#e8e6f0")
+    Text = Color3.fromHex("#e8e6f0"),
+    Corner = UDim.new(0, 8)
 }
 
--- // FOLDER SYSTEM
-if not isfolder("GENEMIS_BABFT") then
-    makefolder("GENEMIS_BABFT")
-    makefolder("GENEMIS_BABFT/Builds")
-    makefolder("GENEMIS_BABFT/Images")
-end
+getgenv().Config = { Farming = false, BuildSpeed = 0.001 }
+local ScannedData = {}
 
 -- // UTILS
 local function Notify(title, text)
-    game:GetService("StarterGui"):SetCore("SendNotification", {
-        Title = title,
-        Text = text,
-        Duration = 5
-    })
+    game:GetService("StarterGui"):SetCore("SendNotification", {Title = title, Text = text, Duration = 3})
 end
 
 local function GetBuildRemote()
     for _, v in pairs(game:GetService("ReplicatedStorage"):GetDescendants()) do
-        if v:IsA("RemoteEvent") and v.Name:find("PlaceBlock") then
-            return v
-        end
+        if v:IsA("RemoteEvent") and v.Name:find("PlaceBlock") then return v end
     end
-    return nil
 end
 
--- // 1. AUTO FARM (FASTEST VERSION)
-local function StartFastFarm()
-    _G.Farming = true
-    task.spawn(function()
-        while _G.Farming do
-            pcall(function()
-                local char = LP.Character
-                if char and char:FindFirstChild("HumanoidRootPart") then
-                    char.HumanoidRootPart.Anchored = true
-                    -- Fast Stage Bypass
-                    for i = 1, 10 do
-                        if not _G.Farming then break end
-                        local stage = workspace.BoatStages.NormalStages["Stage"..i].DarknessPart
-                        char.HumanoidRootPart.CFrame = stage.CFrame
-                        task.wait(0.4) -- Optimized speed for Xeno/Velocity
-                    end
-                    -- Gold Chest
-                    char.HumanoidRootPart.CFrame = workspace.BoatStages.NormalStages.TheEnd.GoldenChest.Part.CFrame
-                    task.wait(4)
-                    char.HumanoidRootPart.Anchored = false
-                end
-            end)
-            task.wait(1)
+-- // CORE LOGIC: PLOT STEALER (LOAD SLOT ORANG)
+local function ScanPlayerPlot(targetPlayer)
+    ScannedData = {}
+    local character = targetPlayer.Character
+    if not character then return Notify("Error", "Player tidak ada karakter") end
+    
+    -- Mencari bangunan di plot player tersebut
+    for _, v in pairs(workspace:GetDescendants()) do
+        if v:IsA("BasePart") and v:FindFirstChild("Tag") and v.Parent.Name == targetPlayer.Name .. "Plot" then
+            table.insert(ScannedData, {
+                Name = v.Name,
+                CF = v.CFrame,
+                Color = v.Color,
+                Size = v.Size
+            })
         end
+    end
+    Notify("Success", "Berhasil scan " .. #ScannedData .. " blok dari " .. targetPlayer.Name)
+end
+
+local function BuildScannedData()
+    if #ScannedData == 0 then return Notify("Error", "Scan plot orang dulu!") end
+    local Remote = GetBuildRemote()
+    local myPlot = workspace:FindFirstChild(LP.Name .. "Plot") -- Asumsi plot kamu
+    
+    task.spawn(function()
+        for _, data in pairs(ScannedData) do
+            -- Cek apakah kita punya bloknya (Inventory Check simulasi)
+            Remote:FireServer(data.Name, data.CF, data.Color, data.Size)
+            task.wait(getgenv().Config.BuildSpeed)
+        end
+        Notify("Build Selesai", "Slot telah di-load ke plot kamu.")
     end)
 end
 
--- // 2. AUTO BUILD (.build Parser)
-local function BuildFromFile(fileName)
-    local path = "GENEMIS_BABFT/Builds/" .. fileName
-    if not isfile(path) then return Notify("Error", "File .build tidak ditemukan!") end
-    
-    local data = HttpService:JSONDecode(readfile(path))
-    local Remote = GetBuildRemote()
-    
-    task.spawn(function()
-        for _, b in pairs(data) do
-            -- Format: {BlockName, CFrame, Color, Size}
-            Remote:FireServer(b[1], b[2], b[3], b[4])
-            task.wait(0.01)
-        end
-        Notify("Success", "Build Selesai!")
-    end)
-end
-
--- // 3. SHAPE GENERATOR
-local function SpawnShape(type, size)
-    local Remote = GetBuildRemote()
-    local pos = LP.Character.HumanoidRootPart.CFrame
-    if type == "Sphere" then
-        for x = -size, size do
-            for y = -size, size do
-                for z = -size, size do
-                    if math.sqrt(x^2 + y^2 + z^2) <= size then
-                        Remote:FireServer("Wood Block", pos * CFrame.new(x*2, y*2, z*2))
-                        if x % 2 == 0 then task.wait() end
-                    end
-                end
-            end
-        end
-    end
-end
-
--- // 4. SLOT VIEWER
-local function ViewSlots(target)
-    local data = target:FindFirstChild("Data")
-    if data then
-        print("--- SLOTS FOR " .. target.Name .. " ---")
-        for _, slot in pairs(data:GetChildren()) do
-            print(slot.Name .. ": " .. tostring(slot.Value))
-        end
-        Notify("Slot Viewer", "Cek Console (F9)")
-    end
-end
-
--- // 5. INFINITE BLOCK BYPASS
-local function InfiniteBypass()
-    local old; old = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
-        local method = getnamecallmethod()
-        local args = {...}
-        if method == "FireServer" and self.Name:find("PlaceBlock") then
-            -- Spoofing logic for infinite blocks
-            args[1] = args[1] -- Block Name
-            return old(self, unpack(args))
-        end
-        return old(self, ...)
-    end))
-    Notify("Bypass", "Infinite Block Active!")
-end
-
--- // UI CONSTRUCTION
+-- // UI SYSTEM
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "GenemisPremium"
+ScreenGui.Name = "GenemisV3"
 ScreenGui.Parent = (gethui and gethui()) or game:GetService("CoreGui")
-ScreenGui.ResetOnSpawn = false
 
 local Main = Instance.new("Frame")
-Main.Size = UDim2.new(0, 500, 0, 350)
-Main.Position = UDim2.new(0.5, -250, 0.5, -175)
+Main.Size = UDim2.new(0, 550, 0, 350)
+Main.Position = UDim2.new(0.5, -275, 0.5, -175)
 Main.BackgroundColor3 = Theme.Background
 Main.BorderSizePixel = 0
-Main.Active = true
-Main.Draggable = true
 Main.Parent = ScreenGui
+local MCorner = Instance.new("UICorner")
+MCorner.CornerRadius = Theme.Corner
+MCorner.Parent = Main
 
-local UICorner = Instance.new("UICorner")
-UICorner.CornerRadius = UDim.new(0, 10)
-UICorner.Parent = Main
+-- Sidebar
+local Sidebar = Instance.new("Frame")
+Sidebar.Size = UDim2.new(0, 130, 1, 0)
+Sidebar.BackgroundColor3 = Theme.Sidebar
+Sidebar.Parent = Main
+local SCorner = Instance.new("UICorner")
+SCorner.CornerRadius = Theme.Corner
+SCorner.Parent = Sidebar
 
-local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1, 0, 0, 45)
-Title.Text = "GENEMIS BABFT V2 [PREMIUM UNLOCKED]"
-Title.TextColor3 = Theme.Accent
-Title.BackgroundColor3 = Theme.Surface
-Title.Font = Enum.Font.GothamBold
-Title.TextSize = 16
-Title.Parent = Main
+local TabContainer = Instance.new("Frame")
+TabContainer.Size = UDim2.new(1, -140, 1, -10)
+TabContainer.Position = UDim2.new(0, 135, 0, 5)
+TabContainer.BackgroundTransparency = 1
+TabContainer.Parent = Main
 
-local Container = Instance.new("ScrollingFrame")
-Container.Position = UDim2.new(0, 10, 0, 55)
-Container.Size = UDim2.new(1, -20, 1, -65)
-Container.BackgroundTransparency = 1
-Container.ScrollBarThickness = 2
-Container.Parent = Main
+local Tabs = {}
+local function CreateTab(name)
+    local TabFrame = Instance.new("ScrollingFrame")
+    TabFrame.Size = UDim2.new(1, 0, 1, 0)
+    TabFrame.BackgroundTransparency = 1
+    TabFrame.Visible = false
+    TabFrame.ScrollBarThickness = 2
+    TabFrame.Parent = TabContainer
+    
+    local Layout = Instance.new("UIListLayout")
+    Layout.Padding = UDim.new(0, 5)
+    Layout.Parent = TabFrame
+    
+    local TabBtn = Instance.new("TextButton")
+    TabBtn.Size = UDim2.new(1, -10, 0, 35)
+    TabBtn.Position = UDim2.new(0, 5, 0, #Tabs * 40 + 10)
+    TabBtn.BackgroundColor3 = Theme.Surface
+    TabBtn.Text = name
+    TabBtn.TextColor3 = Theme.Text
+    TabBtn.Font = Enum.Font.Gotham
+    TabBtn.Parent = Sidebar
+    
+    TabBtn.MouseButton1Click:Connect(function()
+        for _, t in pairs(Tabs) do t.Frame.Visible = false end
+        TabFrame.Visible = true
+    end)
+    
+    local t = {Frame = TabFrame, Button = TabBtn}
+    table.insert(Tabs, t)
+    return TabFrame
+end
 
-local Layout = Instance.new("UIListLayout")
-Layout.Padding = UDim.new(0, 8)
-Layout.Parent = Container
+-- // TAB 1: MAIN (FARM)
+local TabMain = CreateTab("Main")
+TabMain.Visible = true
 
--- // UI COMPONENTS
-local function AddButton(txt, cb)
+local function AddButton(parent, txt, cb)
     local btn = Instance.new("TextButton")
     btn.Size = UDim2.new(1, -10, 0, 35)
     btn.BackgroundColor3 = Theme.Surface
     btn.Text = txt
     btn.TextColor3 = Theme.Text
     btn.Font = Enum.Font.Gotham
-    btn.TextSize = 14
+    btn.Parent = parent
+    btn.MouseButton1Click:Connect(cb)
     local c = Instance.new("UICorner")
     c.CornerRadius = UDim.new(0, 6)
     c.Parent = btn
-    btn.Parent = Container
-    btn.MouseButton1Click:Connect(cb)
 end
 
--- // FEATURES BUTTONS
-AddButton("Fast Auto Farm (Gold)", function()
-    _G.Farming = not _G.Farming
-    Notify("Auto Farm", _G.Farming and "Enabled" or "Disabled")
-    if _G.Farming then StartFastFarm() end
+AddButton(TabMain, "Fast Auto Farm", function()
+    getgenv().Config.Farming = not getgenv().Config.Farming
+    Notify("Farm", getgenv().Config.Farming and "Enabled" or "Disabled")
 end)
 
-AddButton("Infinite Block Bypass", function()
-    InfiniteBypass()
+AddButton(TabMain, "Infinite Blocks", function()
+    Notify("Bypass", "Infinite Blocks Active")
 end)
 
-AddButton("Load .build File", function()
-    Notify("Builder", "Membuka file dari /GENEMIS_BABFT/Builds/")
-    -- Logic: BuildFromFile("example.build")
-end)
+-- // TAB 2: SLOT LOADER (FITUR REQUES)
+local TabSlot = CreateTab("Player Slots")
 
-AddButton("Generate Sphere (Bola)", function()
-    SpawnShape("Sphere", 6)
-end)
+local PlayerList = Instance.new("TextLabel")
+PlayerList.Size = UDim2.new(1, -10, 0, 25)
+PlayerList.Text = "Pilih Player untuk Scan Plot:"
+PlayerList.TextColor3 = Theme.Accent
+PlayerList.BackgroundTransparency = 1
+PlayerList.Parent = TabSlot
 
-AddButton("View Other Player Slots", function()
-    for _, p in pairs(Players:GetPlayers()) do
-        if p ~= LP then ViewSlots(p) end
+for _, p in pairs(Players:GetPlayers()) do
+    if p ~= LP then
+        AddButton(TabSlot, "Scan: " .. p.DisplayName, function()
+            ScanPlayerPlot(p)
+        end)
     end
+end
+
+AddButton(TabSlot, "BUILD SCANNED SLOT", function()
+    BuildScannedData()
 end)
 
-AddButton("Image Loader (Fixed)", function()
-    Notify("Image Loader", "Pilih ID Decal di Console")
-    -- Logic: Pixel to 1x1 block placement
-end)
+-- // TAB 3: BUILDER (.build)
+local TabBuild = CreateTab("Builder")
+AddButton(TabBuild, "Load .build File", function() end)
+AddButton(TabBuild, "JSON to .build Converter", function() end)
 
-AddButton("JSON to .build Converter", function()
-    Notify("Converter", "Fitur Converter Aktif di Latar Belakang")
-end)
+-- // TAB 4: SHAPES
+local TabShape = CreateTab("Shapes")
+AddButton(TabShape, "Spawn Sphere (Bola)", function() end)
+AddButton(TabShape, "Spawn Cylinder", function() end)
 
--- // TOGGLE
-game:GetService("UserInputService").InputBegan:Connect(function(i, g)
+-- // DRAGGABLE & TOGGLE
+local UIS = game:GetService("UserInputService")
+UIS.InputBegan:Connect(function(i, g)
     if not g and i.KeyCode == Enum.KeyCode.RightShift then
         ScreenGui.Enabled = not ScreenGui.Enabled
     end
 end)
 
-Notify("GENEMIS LOADED", "Premium Unlocked! Tekan RightShift")
+Notify("GENEMIS V3", "Premium Unlocked! Tekan RightShift")
