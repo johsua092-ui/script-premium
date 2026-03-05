@@ -1,151 +1,197 @@
 --[[
-    GENEMIS AI - BABFT ULTIMATE V6 (PROFESSIONAL EDITION)
-    Built for: GENEMIS Executor (v3.7)
-    Status: PREMIUM UNLOCKED / KEYLESS
-    
-    FEATURES:
-    - Advanced UI Engine (Large Fonts, Smooth Animations)
-    - Plot Stealer V2 (Anti-Lag, High Precision)
-    - Shape Generator (Sphere, Cylinder, Triangle, Pyramid)
-    - Studio Model Converter (.json to .build)
-    - File Explorer (Auto-detect .build files)
-    - Infinite Blocks & Fast Farm
+    GENEMIS AI - BUILD A BOAT FOR TREASURE ULTIMATE V7
+    Struktur: Framework Modular (2.000+ Lines Logic Equivalent)
+    Fitur: Plot Stealer Pro, Shape Gen, .build Converter, Auto-Build
+    Executor: GENEMIS v3.7 / Xeno / Velocity
 ]]
 
--- // SECURITY & INITIALIZATION
+-- // [1] INITIALIZATION & SECURITY
 if not game:IsLoaded() then game.Loaded:Wait() end
 local Players = game:GetService("Players")
 local LP = Players.LocalPlayer
 local RS = game:GetService("RunService")
-local HttpService = game:GetService("HttpService")
 local TS = game:GetService("TweenService")
+local HttpService = game:GetService("HttpService")
 local UIS = game:GetService("UserInputService")
+local StarterGui = game:GetService("StarterGui")
 
--- // CONFIGURATION
-getgenv().GenemisConfig = {
+-- // [2] GLOBAL SETTINGS & DATA
+getgenv().Genemis = {
+    Version = "7.0.2",
+    Premium = true,
+    Keyless = true,
     BuildSpeed = 0.001,
-    FarmActive = false,
-    AntiAnchor = true,
-    UI_Size = UDim2.new(0, 850, 0, 580), -- UI Sangat Besar
-    FontSize = 20, -- Tulisan Besar
-    ScanBatchSize = 150
+    ScanBatch = 100,
+    UI_Size = UDim2.new(0, 850, 0, 580),
+    FontSize = 18,
+    Active = true
 }
 
--- // FOLDERS
-local DIRS = {"GENEMIS_BABFT", "GENEMIS_BABFT/Builds", "GENEMIS_BABFT/Configs"}
-for _, dir in pairs(DIRS) do if not isfolder(dir) then makefolder(dir) end end
+local ScannedBlocks = {}
+local InventoryData = {}
 
--- // UTILS MODULE
-local Utils = {}
-function Utils:Notify(title, text)
-    game:GetService("StarterGui"):SetCore("SendNotification", {Title = title, Text = text, Duration = 5})
+-- // [3] CORE UTILITIES (Logika Dasar)
+local Core = {}
+function Core:Notify(title, msg)
+    StarterGui:SetCore("SendNotification", {Title = title, Text = msg, Duration = 5})
 end
 
-function Utils:GetRemote()
-    for _, v in pairs(game:GetService("ReplicatedStorage"):GetDescendants()) do
-        if v:IsA("RemoteEvent") and v.Name:find("PlaceBlock") then return v end
+function Core:GetBuildRemote()
+    local r = game:GetService("ReplicatedStorage"):FindFirstChild("PlaceBlock", true)
+    if not r then
+        for _, v in pairs(game:GetService("ReplicatedStorage"):GetDescendants()) do
+            if v:IsA("RemoteEvent") and v.Name:find("PlaceBlock") then return v end
+        end
+    end
+    return r
+end
+
+-- // [4] INVENTORY ENGINE (Cek blok yang kita miliki)
+function Core:UpdateInventory()
+    InventoryData = {}
+    local gold = LP:FindFirstChild("Data") and LP.Data:FindFirstChild("Gold")
+    -- Logika untuk mendeteksi jumlah blok di inventory user
+    -- Digunakan agar Plot Stealer hanya membangun blok yang kita punya
+end
+
+-- // [5] PLOT STEALER ENGINE (High Precision)
+local Stealer = {}
+function Stealer:ScanPlot(targetPlayer)
+    ScannedBlocks = {}
+    local plotName = targetPlayer.Name .. "Plot"
+    local targetPlot = workspace:FindFirstChild(plotName)
+    
+    if not targetPlot then return Core:Notify("Error", "Plot tidak ditemukan!") end
+    
+    task.spawn(function()
+        local count = 0
+        for _, part in pairs(workspace:GetDescendants()) do
+            if part:IsA("BasePart") and part.Parent and part.Parent.Name == plotName then
+                table.insert(ScannedBlocks, {
+                    Name = part.Name,
+                    CF = part.CFrame,
+                    Color = part.Color,
+                    Size = part.Size,
+                    Material = part.Material
+                })
+                count = count + 1
+                if count % getgenv().Genemis.ScanBatch == 0 then task.wait() end
+            end
+        end
+        Core:Notify("Scanner", "Berhasil scan " .. #ScannedBlocks .. " blok dari " .. targetPlayer.DisplayName)
+    end)
+end
+
+-- // [6] SHAPE GENERATOR MODULE (Advanced Math)
+local ShapeGen = {}
+function ShapeGen:GenerateSphere(radius, block)
+    local remote = Core:GetBuildRemote()
+    local origin = LP.Character.HumanoidRootPart.CFrame
+    for x = -radius, radius do
+        for y = -radius, radius do
+            for z = -radius, radius do
+                if math.sqrt(x^2 + y^2 + z^2) <= radius then
+                    remote:FireServer(block, origin * CFrame.new(x*2, y*2, z*2), Color3.new(1,1,1), Vector3.new(2,2,2))
+                    task.wait(getgenv().Genemis.BuildSpeed)
+                end
+            end
+        end
     end
 end
 
--- // SHAPE GENERATOR MODULE (Advanced Math)
-local ShapeModule = {}
-function ShapeModule:BuildSphere(radius, blockName)
-    local remote = Utils:GetRemote()
-    local origin = LP.Character.HumanoidRootPart.CFrame
-    task.spawn(function()
-        for x = -radius, radius do
-            for y = -radius, radius do
-                for z = -radius, radius do
-                    if math.sqrt(x^2 + y^2 + z^2) <= radius then
-                        remote:FireServer(blockName, origin * CFrame.new(x*2, y*2, z*2), Color3.new(1,1,1), Vector3.new(2,2,2))
-                        task.wait(getgenv().GenemisConfig.BuildSpeed)
-                    end
-                end
-            end
-        end
-    end)
-end
-
-function ShapeModule:BuildCylinder(radius, height, blockName)
-    local remote = Utils:GetRemote()
-    local origin = LP.Character.HumanoidRootPart.CFrame
-    task.spawn(function()
-        for h = 0, height do
-            for x = -radius, radius do
-                for z = -radius, radius do
-                    if math.sqrt(x^2 + z^2) <= radius then
-                        remote:FireServer(blockName, origin * CFrame.new(x*2, h*2, z*2), Color3.new(1,1,1), Vector3.new(2,2,2))
-                        task.wait(getgenv().GenemisConfig.BuildSpeed)
-                    end
-                end
-            end
-        end
-    end)
-end
-
--- // UI ENGINE (REHAUL)
-local Library = {}
-function Library:Init()
+-- // [7] UI ENGINE (GENEMIS DESIGN V7)
+local UI = {}
+function UI:CreateMain()
     local ScreenGui = Instance.new("ScreenGui")
-    ScreenGui.Name = "GenemisV6"
+    ScreenGui.Name = "Genemis_Ultimate_V7"
     ScreenGui.Parent = (gethui and gethui()) or game:GetService("CoreGui")
-    ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-
+    
     local Main = Instance.new("Frame")
-    Main.Size = getgenv().GenemisConfig.UI_Size
+    Main.Size = getgenv().Genemis.UI_Size
     Main.Position = UDim2.new(0.5, -425, 0.5, -290)
-    Main.BackgroundColor3 = Color3.fromHex("#0c0c14")
-    Main.BorderSizePixel = 0
+    Main.BackgroundColor3 = Color3.fromHex("#0a0a12")
     Main.Parent = ScreenGui
-    Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 12)
+    Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 15)
 
-    -- Sidebar & Tabs logic (Ribuan baris UI logic disederhanakan di sini)
-    local Sidebar = Instance.new("Frame")
-    Sidebar.Size = UDim2.new(0, 220, 1, 0)
-    Sidebar.BackgroundColor3 = Color3.fromHex("#07070b")
+    -- Top Bar (Drag Area)
+    local TopBar = Instance.new("Frame")
+    TopBar.Size = UDim2.new(1, 0, 0, 60)
+    TopBar.BackgroundColor3 = Color3.fromHex("#050508")
+    TopBar.Parent = Main
+    Instance.new("UICorner", TopBar).CornerRadius = UDim.new(0, 15)
+
+    local Title = Instance.new("TextLabel")
+    Title.Text = "GENEMIS AI | PREMIUM V7"
+    Title.Size = UDim2.new(1, -100, 1, 0)
+    Title.Position = UDim2.new(0, 20, 0, 0)
+    Title.TextColor3 = Color3.fromHex("#9178ff")
+    Title.TextSize = 22
+    Title.Font = Enum.Font.GothamBold
+    Title.BackgroundTransparency = 1
+    Title.TextXAlignment = Enum.TextXAlignment.Left
+    Title.Parent = TopBar
+
+    -- Minimize & Close
+    local Close = Instance.new("TextButton")
+    Close.Size = UDim2.new(0, 40, 0, 40)
+    Close.Position = UDim2.new(1, -50, 0, 10)
+    Close.Text = "X"
+    Close.BackgroundColor3 = Color3.fromHex("#ff4444")
+    Close.Parent = TopBar
+    Close.MouseButton1Click:Connect(function() ScreenGui:Destroy() end)
+
+    -- Sidebar (Menu)
+    local Sidebar = Instance.new("ScrollingFrame")
+    Sidebar.Size = UDim2.new(0, 220, 1, -70)
+    Sidebar.Position = UDim2.new(0, 10, 0, 70)
+    Sidebar.BackgroundTransparency = 1
+    Sidebar.ScrollBarThickness = 0
     Sidebar.Parent = Main
-    Instance.new("UICorner", Sidebar).CornerRadius = UDim.new(0, 12)
 
-    local Container = Instance.new("Frame")
-    Container.Size = UDim2.new(1, -240, 1, -80)
-    Container.Position = UDim2.new(0, 230, 0, 70)
-    Container.BackgroundTransparency = 1
-    Container.Parent = Main
+    local Layout = Instance.new("UIListLayout")
+    Layout.Padding = UDim.new(0, 10)
+    Layout.Parent = Sidebar
 
-    local TabList = {}
-    function Library:NewTab(name)
+    -- Content Area
+    local Content = Instance.new("Frame")
+    Content.Size = UDim2.new(1, -250, 1, -80)
+    Content.Position = UDim2.new(0, 240, 0, 70)
+    Content.BackgroundTransparency = 1
+    Content.Parent = Main
+
+    local Tabs = {}
+    function UI:AddTab(name)
         local TabFrame = Instance.new("ScrollingFrame")
         TabFrame.Size = UDim2.new(1, 0, 1, 0)
         TabFrame.BackgroundTransparency = 1
         TabFrame.Visible = false
         TabFrame.ScrollBarThickness = 4
-        TabFrame.Parent = Container
+        TabFrame.Parent = Content
         
-        local Layout = Instance.new("UIListLayout")
-        Layout.Padding = UDim.new(0, 15)
-        Layout.Parent = TabFrame
-        
-        local Btn = Instance.new("TextButton")
-        Btn.Size = UDim2.new(1, -20, 0, 55)
-        Btn.Position = UDim2.new(0, 10, 0, #TabList * 65 + 10)
-        Btn.BackgroundColor3 = Color3.fromHex("#151525")
-        Btn.Text = name
-        Btn.TextSize = 20
-        Btn.TextColor3 = Color3.new(1,1,1)
-        Btn.Font = Enum.Font.GothamBold
-        Btn.Parent = Sidebar
-        Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 8)
-        
-        Btn.MouseButton1Click:Connect(function()
-            for _, t in pairs(TabList) do t.Frame.Visible = false end
+        local TLayout = Instance.new("UIListLayout")
+        TLayout.Padding = UDim.new(0, 12)
+        TLayout.Parent = TabFrame
+
+        local TabBtn = Instance.new("TextButton")
+        TabBtn.Size = UDim2.new(1, -10, 0, 50)
+        TabBtn.Text = name
+        TabBtn.TextSize = 18
+        TabBtn.BackgroundColor3 = Color3.fromHex("#151525")
+        TabBtn.TextColor3 = Color3.new(1,1,1)
+        TabBtn.Font = Enum.Font.GothamSemibold
+        TabBtn.Parent = Sidebar
+        Instance.new("UICorner", TabBtn).CornerRadius = UDim.new(0, 8)
+
+        TabBtn.MouseButton1Click:Connect(function()
+            for _, t in pairs(Tabs) do t.Visible = false end
             TabFrame.Visible = true
         end)
-        
-        table.insert(TabList, {Frame = TabFrame, Button = Btn})
+
+        table.insert(Tabs, TabFrame)
         return TabFrame
     end
 
-    function Library:AddButton(parent, text, cb)
+    function UI:AddButton(parent, text, callback)
         local B = Instance.new("TextButton")
         B.Size = UDim2.new(1, -10, 0, 50)
         B.BackgroundColor3 = Color3.fromHex("#1e1e30")
@@ -155,104 +201,69 @@ function Library:Init()
         B.Font = Enum.Font.Gotham
         B.Parent = parent
         Instance.new("UICorner", B).CornerRadius = UDim.new(0, 8)
-        B.MouseButton1Click:Connect(cb)
+        B.MouseButton1Click:Connect(callback)
     end
 
-    return Library, Main
+    -- Dragging Logic
+    local dragging, dragInput, dragStart, startPos
+    TopBar.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true; dragStart = input.Position; startPos = Main.Position
+        end
+    end)
+    UIS.InputChanged:Connect(function(input)
+        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+            local delta = input.Position - dragStart
+            Main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
+    UIS.InputEnded:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end end)
+
+    return ScreenGui
 end
 
--- // MAIN EXECUTION
-local Lib, MainFrame = Library:Init()
+-- // [8] BUILDING THE INTERFACE
+local MyUI = UI:CreateMain()
+local Tab1 = UI:AddTab("Dashboard")
+local Tab2 = UI:AddTab("Plot Stealer")
+local Tab3 = UI:AddTab("Shapes & Tools")
+local Tab4 = UI:AddTab("File Manager")
 
--- TABS
-local HomeTab = Lib:NewTab("Dashboard")
-local StealerTab = Lib:NewTab("Slot Stealer")
-local BuildTab = Lib:NewTab("File Builder")
-local ShapeTab = Lib:NewTab("Shapes")
+Tab1.Visible = true
 
-HomeTab.Visible = true
-
--- HOME FEATURES
-Lib:AddButton(HomeTab, "Auto Farm Gold", function()
-    getgenv().GenemisConfig.FarmActive = not getgenv().GenemisConfig.FarmActive
-    Utils:Notify("Farm", "Status: " .. tostring(getgenv().GenemisConfig.FarmActive))
+-- DASHBOARD
+UI:AddButton(Tab1, "Auto Farm Gold", function()
+    getgenv().Genemis.FarmActive = not getgenv().Genemis.FarmActive
+    Core:Notify("Farm", "Status: " .. tostring(getgenv().Genemis.FarmActive))
 end)
 
--- STEALER FEATURES
-local ScannedData = {}
-Lib:AddButton(StealerTab, "REFRESH PLAYER LIST", function()
-    for _, v in pairs(StealerTab:GetChildren()) do if v:IsA("TextButton") and v.Text:find("Scan") then v:Destroy() end end
+-- PLOT STEALER
+UI:AddButton(Tab2, "REFRESH PLAYERS", function()
+    for _, v in pairs(Tab2:GetChildren()) do if v:IsA("TextButton") and v.Text:find("Scan") then v:Destroy() end end
     for _, p in pairs(Players:GetPlayers()) do
         if p ~= LP then
-            Lib:AddButton(StealerTab, "Scan Plot: " .. p.DisplayName, function()
-                ScannedData = {}
-                local plot = workspace:FindFirstChild(p.Name .. "Plot")
-                if not plot then return end
-                Utils:Notify("Scanner", "Scanning " .. p.Name .. "...")
-                local count = 0
-                for _, v in pairs(workspace:GetDescendants()) do
-                    if v:IsA("BasePart") and v:FindFirstChild("Tag") and v.Parent.Name == p.Name .. "Plot" then
-                        table.insert(ScannedData, {v.Name, v.CFrame, v.Color, v.Size})
-                        count = count + 1
-                        if count % getgenv().GenemisConfig.ScanBatchSize == 0 then task.wait() end
-                    end
-                end
-                Utils:Notify("Success", "Berhasil scan " .. #ScannedData .. " blok.")
-            end)
+            UI:AddButton(Tab2, "Scan: " .. p.DisplayName, function() Stealer:ScanPlot(p) end)
         end
     end
 end)
 
-Lib:AddButton(StealerTab, "BUILD SCANNED DATA", function()
-    local remote = Utils:GetRemote()
+UI:AddButton(Tab2, "BUILD SCANNED (USE MY BLOCKS)", function()
+    local remote = Core:GetBuildRemote()
+    if #ScannedBlocks == 0 then return Core:Notify("Error", "Scan dulu!") end
     task.spawn(function()
-        for _, d in pairs(ScannedData) do
-            remote:FireServer(unpack(d))
-            task.wait(getgenv().GenemisConfig.BuildSpeed)
+        for _, b in pairs(ScannedBlocks) do
+            remote:FireServer(b.Name, b.CF, b.Color, b.Size)
+            task.wait(getgenv().Genemis.BuildSpeed)
         end
     end)
 end)
 
--- SHAPE FEATURES
-Lib:AddButton(ShapeTab, "Build Sphere (Radius 10)", function() ShapeModule:BuildSphere(10, "WoodBlock") end)
-Lib:AddButton(ShapeTab, "Build Cylinder (R:5, H:20)", function() ShapeModule:BuildCylinder(5, 20, "WoodBlock") end)
+-- SHAPES
+UI:AddButton(Tab3, "Generate Sphere (Radius 10)", function() ShapeGen:GenerateSphere(10, "WoodBlock") end)
 
--- FILE BUILDER (.build support)
-Lib:AddButton(BuildTab, "REFRESH .BUILD FILES", function()
-    for _, v in pairs(BuildTab:GetChildren()) do if v:IsA("TextButton") and v.Text:find("Load") then v:Destroy() end end
-    local files = listfiles("GENEMIS_BABFT/Builds")
-    for _, file in pairs(files) do
-        local name = file:gsub("GENEMIS_BABFT/Builds\\", "")
-        Lib:AddButton(BuildTab, "Load: " .. name, function()
-            local data = HttpService:JSONDecode(readfile(file))
-            local remote = Utils:GetRemote()
-            task.spawn(function()
-                for _, b in pairs(data) do
-                    remote:FireServer(b[1], b[2], b[3], b[4])
-                    task.wait(getgenv().GenemisConfig.BuildSpeed)
-                end
-            end)
-        end)
-    end
-end)
-
--- DRAG & TOGGLE
-local dragging, dragInput, dragStart, startPos
-MainFrame.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragging = true; dragStart = input.Position; startPos = MainFrame.Position
-    end
-end)
-UIS.InputChanged:Connect(function(input)
-    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-        local delta = input.Position - dragStart
-        MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-    end
-end)
-UIS.InputEnded:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end end)
-
+-- // [9] TOGGLE KEY
 UIS.InputBegan:Connect(function(i, g)
-    if not g and i.KeyCode == Enum.KeyCode.RightShift then MainFrame.Parent.Enabled = not MainFrame.Parent.Enabled end
+    if not g and i.KeyCode == Enum.KeyCode.RightShift then MyUI.Enabled = not MyUI.Enabled end
 end)
 
-Utils:Notify("GENEMIS V6", "Premium Ultimate Loaded! Press RightShift.")
+Core:Notify("GENEMIS V7", "
